@@ -165,7 +165,7 @@ export default function ClientDashboardPage() {
 
           <div className={cn(ui.card, "p-6")}>
             <div className="text-sm text-neutral-600 dark:text-neutral-400">
-              סה"כ תורים
+              {'סה"כ תורים'}
             </div>
             <div className="mt-2 text-3xl font-bold text-neutral-900 dark:text-neutral-100">
               {appointments.length}

@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminClient } from '@/core/config/supabaseClient';
+import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { hashClientPassword } from '@/lib/auth/clientAuth';
 
 export async function POST(request: NextRequest) {
@@ -178,11 +178,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const client = Array.isArray(invitation.clients)
+      ? invitation.clients[0]
+      : invitation.clients;
+    const teacher = Array.isArray(invitation.teachers)
+      ? invitation.teachers[0]
+      : invitation.teachers;
+
     return NextResponse.json({
       valid: true,
       invitation: {
-        clientName: invitation.clients.full_name,
-        teacherName: invitation.teachers.full_name,
+        clientName: client?.full_name ?? null,
+        teacherName: teacher?.full_name ?? null,
         email: invitation.email,
       },
     });

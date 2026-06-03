@@ -5,7 +5,7 @@
  * דף שינוי מועד תור ללקוחות
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Appointment {
@@ -18,7 +18,7 @@ interface Appointment {
   };
 }
 
-export default function RescheduleAppointmentPage() {
+function RescheduleAppointmentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -284,5 +284,19 @@ export default function RescheduleAppointmentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RescheduleAppointmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-neutral-600">טוען...</p>
+        </div>
+      }
+    >
+      <RescheduleAppointmentPageContent />
+    </Suspense>
   );
 }

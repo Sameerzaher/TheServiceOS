@@ -36,6 +36,8 @@ dist/
 .DS_Store
 *.pem
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # debug & logs
 npm-debug.log*
@@ -52,8 +54,15 @@ pnpm-debug.log*
 # vercel
 .vercel
 
-# IDE / editor (optional — remove these lines if your team commits shared configs)
+# Supabase CLI (local dev)
+.supabase/
+supabase/.branches
+supabase/.temp
+
+# IDE / editor
 .idea/
+.vscode/
+.cursor/
 *.swp
 *.swo
 *~
@@ -61,3 +70,6 @@ pnpm-debug.log*
 # Turbopack / tooling caches
 .turbo
 .eslintcache
+
+# Local app exports (browser download backups)
+serviceos-backup-*.json

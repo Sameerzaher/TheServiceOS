@@ -80,7 +80,7 @@ export function exportAppointmentsToCSV(
       [AppointmentStatus.Scheduled]: 'מתוזמן',
       [AppointmentStatus.Confirmed]: 'מאושר',
       [AppointmentStatus.Completed]: 'הושלם',
-      [AppointmentStatus.Canceled]: 'בוטל',
+      [AppointmentStatus.Cancelled]: 'בוטל',
       [AppointmentStatus.NoShow]: 'לא הגיע',
     };
     
@@ -100,7 +100,7 @@ export function exportAppointmentsToCSV(
       statusMap[apt.status] || apt.status,
       paymentStatusMap[apt.paymentStatus] || apt.paymentStatus,
       apt.amount?.toString() || '0',
-      apt.customFields?.notes || '',
+      typeof apt.customFields?.notes === 'string' ? apt.customFields.notes : '',
     ];
   });
   
@@ -253,7 +253,7 @@ export function exportFullAnalyticsReport(
     ['סיכום תורים'],
     ['סה"כ תורים', appointmentsInRange.length.toString()],
     ['תורים שהושלמו', completed.length.toString()],
-    ['תורים שבוטלו', appointmentsInRange.filter(apt => apt.status === AppointmentStatus.Canceled).length.toString()],
+    ['תורים שבוטלו', appointmentsInRange.filter(apt => apt.status === AppointmentStatus.Cancelled).length.toString()],
     [''],
     ['סיכום הכנסות'],
     ['סה"כ הכנסות', `₪${totalRevenue}`],

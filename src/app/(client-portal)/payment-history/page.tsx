@@ -95,7 +95,7 @@ export default function PaymentHistoryPage() {
         {/* Statistics Cards */}
         <div className="grid gap-4 md:grid-cols-3 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="text-sm text-gray-600 mb-1">סה"כ שולם</div>
+            <div className="text-sm text-gray-600 mb-1">{'סה"כ שולם'}</div>
             <div className="text-3xl font-bold text-green-600">
               ₪{statistics.totalPaid.toFixed(2)}
             </div>
@@ -109,7 +109,7 @@ export default function PaymentHistoryPage() {
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="text-sm text-gray-600 mb-1">סה"כ תשלומים</div>
+            <div className="text-sm text-gray-600 mb-1">{'סה"כ תשלומים'}</div>
             <div className="text-3xl font-bold text-blue-600">
               {statistics.totalPayments}
             </div>
@@ -206,7 +206,7 @@ export default function PaymentHistoryPage() {
         {appointments.length > 0 && (
           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
-              💡 <strong>טיפ:</strong> לחץ על "הורד חשבונית" כדי לשמור או להדפיס את החשבונית.
+              💡 <strong>טיפ:</strong> לחץ על &quot;הורד חשבונית&quot; כדי לשמור או להדפיס את החשבונית.
               החשבונית תיפתח בחלון חדש ותוכל להדפיס אותה או לשמור כ-PDF.
             </p>
           </div>

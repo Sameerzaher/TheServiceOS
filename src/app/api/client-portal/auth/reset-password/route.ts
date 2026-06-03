@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminClient } from '@/core/config/supabaseClient';
+import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { hashClientPassword } from '@/lib/auth/clientAuth';
 
 export async function POST(request: NextRequest) {

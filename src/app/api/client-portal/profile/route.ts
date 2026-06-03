@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminClient } from '@/core/config/supabaseClient';
+import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { hashClientPassword, verifyClientPassword, isValidClientEmail } from '@/lib/auth/clientAuth';
 
 /**

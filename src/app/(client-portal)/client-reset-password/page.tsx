@@ -5,10 +5,10 @@
  * דף איפוס סיסמה ללקוחות
  */
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function ClientResetPasswordPage() {
+function ClientResetPasswordPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [password, setPassword] = useState('');
@@ -143,5 +143,19 @@ export default function ClientResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ClientResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-neutral-600">טוען...</p>
+        </div>
+      }
+    >
+      <ClientResetPasswordPageContent />
+    </Suspense>
   );
 }

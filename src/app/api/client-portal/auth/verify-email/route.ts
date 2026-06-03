@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminClient } from '@/core/config/supabaseClient';
+import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { emailService } from '@/lib/email/emailService';
 
 export async function POST(request: NextRequest) {

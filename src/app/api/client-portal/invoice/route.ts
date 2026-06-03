@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdminClient } from '@/core/config/supabaseClient';
+import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 
 /**
  * GET - Generate and download invoice PDF (simplified HTML version)
@@ -80,6 +80,13 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const client = Array.isArray(appointment.clients)
+      ? appointment.clients[0]
+      : appointment.clients;
+    const teacher = Array.isArray(appointment.teachers)
+      ? appointment.teachers[0]
+      : appointment.teachers;
 
     // Generate simple HTML invoice
     const invoiceDate = new Date(appointment.created_at).toLocaleDateString('he-IL');
@@ -206,17 +213,17 @@ export async function GET(request: NextRequest) {
     <div class="invoice-info">
       <div>
         <div class="section-title">מפרט עסק</div>
-        <div class="info-row"><strong>שם עסק:</strong> ${appointment.teachers.business_name || appointment.teachers.full_name}</div>
-        <div class="info-row"><strong>איש קשר:</strong> ${appointment.teachers.full_name}</div>
-        <div class="info-row"><strong>טלפון:</strong> ${appointment.teachers.phone}</div>
-        ${appointment.teachers.email ? `<div class="info-row"><strong>אימייל:</strong> ${appointment.teachers.email}</div>` : ''}
+        <div class="info-row"><strong>שם עסק:</strong> ${teacher?.business_name || teacher?.full_name || ''}</div>
+        <div class="info-row"><strong>איש קשר:</strong> ${teacher?.full_name || ''}</div>
+        <div class="info-row"><strong>טלפון:</strong> ${teacher?.phone || ''}</div>
+        ${teacher?.email ? `<div class="info-row"><strong>אימייל:</strong> ${teacher.email}</div>` : ''}
       </div>
 
       <div>
         <div class="section-title">פרטי לקוח</div>
-        <div class="info-row"><strong>שם:</strong> ${appointment.clients.full_name}</div>
-        <div class="info-row"><strong>טלפון:</strong> ${appointment.clients.phone}</div>
-        ${appointment.clients.email ? `<div class="info-row"><strong>אימייל:</strong> ${appointment.clients.email}</div>` : ''}
+        <div class="info-row"><strong>שם:</strong> ${client?.full_name || ''}</div>
+        <div class="info-row"><strong>טלפון:</strong> ${client?.phone || ''}</div>
+        ${client?.email ? `<div class="info-row"><strong>אימייל:</strong> ${client.email}</div>` : ''}
       </div>
     </div>
 

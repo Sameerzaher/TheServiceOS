@@ -5,10 +5,10 @@
  * דף קבלת הזמנה לפורטל
  */
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function ClientInvitationPage() {
+function ClientInvitationPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -202,5 +202,19 @@ export default function ClientInvitationPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ClientInvitationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-neutral-600">טוען...</p>
+        </div>
+      }
+    >
+      <ClientInvitationPageContent />
+    </Suspense>
   );
 }

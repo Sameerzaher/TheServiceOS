@@ -79,7 +79,7 @@ export function calculateAnalyticsStats(
     apt => apt.status === AppointmentStatus.Completed
   ).length;
   const canceledAppointments = appointmentsInRange.filter(
-    apt => apt.status === AppointmentStatus.Canceled || apt.status === AppointmentStatus.NoShow
+    apt => apt.status === AppointmentStatus.Cancelled || apt.status === AppointmentStatus.NoShow
   ).length;
   const upcomingAppointments = appointmentsInRange.filter(apt => {
     const aptDate = new Date(apt.startAt);
@@ -193,7 +193,7 @@ export function calculateDailyStats(
           stats.completed++;
           stats.revenue += apt.amount || 0;
         }
-        if (apt.status === AppointmentStatus.Canceled || apt.status === AppointmentStatus.NoShow) {
+        if (apt.status === AppointmentStatus.Cancelled || apt.status === AppointmentStatus.NoShow) {
           stats.canceled++;
         }
       }
