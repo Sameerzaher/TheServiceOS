@@ -1,0 +1,31 @@
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "תור פה",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "offers": {
+    "@type": "Offer",
+    "price": "99",
+    "priceCurrency": "ILS",
+    "priceValidUntil": "2026-12-31"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.9",
+    "ratingCount": "50"
+  },
+  "description": "מערכת ניהול תורים חכמה לעסקים קטנים - הזמנת תורים אונליין, ניהול לקוחות, התראות ווטסאפ ועוד",
+  "featureList": [
+    "הזמנת תורים אונליין 24/7",
+    "ניהול יומן אוטומטי",
+    "התראות ווטסאפ ללקוחות",
+    "מעקב תשלומים",
+    "דוחות ותובנות",
+    "דף הזמנה מותאם אישית"
+  ],
+  "screenshot": "https://torpo.co.il/screenshot.png",
+  "softwareVersion": "1.0",
+  "applicationSubCategory": "Appointment Scheduling",
+  "inLanguage": "he"
+}
