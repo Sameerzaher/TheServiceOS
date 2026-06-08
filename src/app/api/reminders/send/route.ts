@@ -1,27 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { messagingService } from '@/lib/messaging/messagingService';
+import { validateSession } from '@/lib/auth/session';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
+    const session = await validateSession(req);
+    if (!session.ok) {
+      return NextResponse.json(
+        { ok: false, error: 'לא מאומת' },
+        { status: 401 },
+      );
+    }
+
     const body = await req.json();
     const { appointmentId, type = 'whatsapp' } = body;
 
     if (!appointmentId) {
       return NextResponse.json(
         { ok: false, error: 'חסר appointment ID' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const supabase = getSupabaseAdminClient();
 
-    // Get appointment with client details
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
       .select(`
-        *,
-        client:clients(id, full_name, phone)
+        id,
+        start_at,
+        teacher_id,
+        clients ( id, full_name, phone )
       `)
       .eq('id', appointmentId)
       .single();
@@ -29,43 +42,42 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (aptError || !appointment) {
       return NextResponse.json(
         { ok: false, error: 'תור לא נמצא' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    // Get teacher/business details
     const { data: teacher } = await supabase
       .from('teachers')
       .select('id, business_name, business_id')
-      .eq('id', appointment.teacherId)
+      .eq('id', appointment.teacher_id)
       .single();
 
     if (!teacher) {
       return NextResponse.json(
         { ok: false, error: 'מורה לא נמצא' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    const client = appointment.client as any;
-    
-    if (!client || !client.phone) {
+    const client = Array.isArray(appointment.clients)
+      ? appointment.clients[0]
+      : appointment.clients;
+
+    if (!client?.phone) {
       return NextResponse.json(
         { ok: false, error: 'ללקוח אין מספר טלפון' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Send reminder
     const result = await messagingService.sendAppointmentReminder(
       client.phone,
-      client.full_name,
-      new Date(appointment.startAt),
-      teacher.business_name,
-      type
+      client.full_name ?? 'לקוח',
+      new Date(appointment.start_at),
+      teacher.business_name ?? 'העסק',
+      type,
     );
 
-    // Log the message
     await supabase.from('message_logs').insert({
       business_id: teacher.business_id,
       appointment_id: appointmentId,
@@ -73,7 +85,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       phone_number: client.phone,
       message_type: type,
       message_purpose: 'appointment_reminder',
-      message_content: `Reminder sent for appointment at ${appointment.startAt}`,
+      message_content: `Manual reminder for appointment at ${appointment.start_at}`,
       status: result.success ? 'sent' : 'failed',
       provider: result.provider,
       provider_message_id: result.messageId,
@@ -84,16 +96,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!result.success) {
       return NextResponse.json(
         { ok: false, error: result.error || 'שגיאה בשליחת ההודעה' },
-        { status: 500 }
+        { status: 500 },
       );
     }
-
-    console.log('[reminders/send] Reminder sent successfully:', {
-      appointmentId,
-      clientPhone: client.phone,
-      type,
-      messageId: result.messageId,
-    });
 
     return NextResponse.json({
       ok: true,
@@ -104,7 +109,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.error('[reminders/send] Error:', error);
     return NextResponse.json(
       { ok: false, error: 'שגיאה בשליחת תזכורת' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

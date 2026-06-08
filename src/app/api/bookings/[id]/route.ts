@@ -10,6 +10,7 @@ import { isMissingColumnError } from "@/core/repositories/supabase/postgrestErro
 import { AppointmentStatus, PaymentStatus } from "@/core/types/appointment";
 import { PUBLIC_BOOKING_CUSTOM_FIELD_KEYS } from "@/features/booking/logic/publicBookingShared";
 import { resolveTeacherIdFromRequest } from "@/lib/api/resolveTeacherId";
+import { scheduleAppointmentReminders } from "@/core/reminders/autoSchedule";
 import {
   getSupabaseAdminClient,
   isSupabaseAdminConfigured,
@@ -263,6 +264,13 @@ export async function PUT(
           .eq("business_id", businessId);
       }
       if (delAfter.error) throw delAfter.error;
+
+      void scheduleAppointmentReminders(supabase, {
+        businessId,
+        teacherId,
+        appointmentId,
+        startAt: startIso,
+      });
 
       return NextResponse.json({
         ok: true as const,

@@ -1,12 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
+import { validateSession } from '@/lib/auth/session';
+import { resolveTeacherScopeFromSession } from '@/lib/api/resolveTeacherId';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const DEFAULT_SETTINGS = {
+  reminders_enabled: true,
+  reminder_24h_enabled: true,
+  reminder_24h_type: 'whatsapp',
+  reminder_2h_enabled: false,
+  reminder_2h_type: 'whatsapp',
+  reminder_1h_enabled: false,
+  reminder_1h_type: 'sms',
+  payment_reminder_enabled: true,
+  payment_reminder_days_after: 3,
+  payment_reminder_type: 'whatsapp',
+};
+
+const UPDATABLE_FIELDS = new Set([
+  'reminders_enabled',
+  'reminder_24h_enabled',
+  'reminder_24h_type',
+  'reminder_2h_enabled',
+  'reminder_2h_type',
+  'reminder_1h_enabled',
+  'reminder_1h_type',
+  'payment_reminder_enabled',
+  'payment_reminder_days_after',
+  'payment_reminder_type',
+  'appointment_reminder_template',
+  'payment_reminder_template',
+]);
+
+function pickUpdatableFields(body: Record<string, unknown>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (UPDATABLE_FIELDS.has(key)) payload[key] = value;
+  }
+  return payload;
+}
+
+async function resolveTeacherId(req: NextRequest, body?: unknown): Promise<string | null> {
+  const session = await validateSession(req);
+  if (!session.ok || !session.teacherId) return null;
+  return resolveTeacherScopeFromSession(req, session.teacherId, session.role, body);
+}
 
 // GET - Get reminder settings
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    // Get teacher ID from session (simplified - you may need to get from auth)
-    const teacherId = req.headers.get('x-teacher-id');
-    
+    const teacherId = await resolveTeacherId(req);
     if (!teacherId) {
       return NextResponse.json(
         { ok: false, error: 'לא מחובר' },
@@ -16,7 +61,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     const supabase = getSupabaseAdminClient();
 
-    // Get or create settings
     let { data: settings, error } = await supabase
       .from('reminder_settings')
       .select('*')
@@ -24,21 +68,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .single();
 
     if (error && error.code === 'PGRST116') {
-      // Settings don't exist, create default
       const { data: newSettings, error: createError } = await supabase
         .from('reminder_settings')
         .insert({
           teacher_id: teacherId,
-          reminders_enabled: true,
-          reminder_24h_enabled: true,
-          reminder_24h_type: 'whatsapp',
-          reminder_2h_enabled: false,
-          reminder_2h_type: 'whatsapp',
-          reminder_1h_enabled: false,
-          reminder_1h_type: 'sms',
-          payment_reminder_enabled: true,
-          payment_reminder_days_after: 3,
-          payment_reminder_type: 'whatsapp',
+          ...DEFAULT_SETTINGS,
         })
         .select()
         .single();
@@ -52,6 +86,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }
 
       settings = newSettings;
+    } else if (error) {
+      console.error('[reminders/settings] GET error:', error);
+      return NextResponse.json(
+        { ok: false, error: 'שגיאה בטעינת הגדרות' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -70,8 +110,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 // PUT - Update reminder settings
 export async function PUT(req: NextRequest): Promise<NextResponse> {
   try {
-    const teacherId = req.headers.get('x-teacher-id');
-    
+    const body = await req.json();
+    const teacherId = await resolveTeacherId(req, body);
     if (!teacherId) {
       return NextResponse.json(
         { ok: false, error: 'לא מחובר' },
@@ -79,15 +119,43 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const body = await req.json();
+    const payload = pickUpdatableFields(body as Record<string, unknown>);
+    if (Object.keys(payload).length === 0) {
+      return NextResponse.json(
+        { ok: false, error: 'אין שדות לעדכון' },
+        { status: 400 }
+      );
+    }
+
     const supabase = getSupabaseAdminClient();
 
-    const { data: settings, error } = await supabase
+    const { data: existing } = await supabase
       .from('reminder_settings')
-      .update(body)
+      .select('id')
       .eq('teacher_id', teacherId)
-      .select()
-      .single();
+      .maybeSingle();
+
+    let settings;
+    let error;
+
+    if (existing) {
+      ({ data: settings, error } = await supabase
+        .from('reminder_settings')
+        .update({ ...payload, updated_at: new Date().toISOString() })
+        .eq('teacher_id', teacherId)
+        .select()
+        .single());
+    } else {
+      ({ data: settings, error } = await supabase
+        .from('reminder_settings')
+        .insert({
+          teacher_id: teacherId,
+          ...DEFAULT_SETTINGS,
+          ...payload,
+        })
+        .select()
+        .single());
+    }
 
     if (error) {
       console.error('[reminders/settings] Update error:', error);

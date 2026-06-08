@@ -83,13 +83,16 @@ class EmailService {
   private provider: EmailProvider;
 
   constructor() {
-    const emailProvider = process.env.EMAIL_PROVIDER || 'console';
-    
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const emailProvider =
+      process.env.EMAIL_PROVIDER || (resendApiKey ? 'resend' : 'console');
+    const fromEmail =
+      process.env.EMAIL_FROM ||
+      process.env.RESEND_FROM_EMAIL ||
+      'noreply@serviceos.com';
+
     switch (emailProvider) {
       case 'resend':
-        const resendApiKey = process.env.RESEND_API_KEY;
-        const fromEmail = process.env.EMAIL_FROM || 'noreply@serviceos.com';
-        
         if (!resendApiKey) {
           console.warn('[Email] RESEND_API_KEY not found, falling back to console');
           this.provider = new ConsoleProvider();
@@ -97,7 +100,7 @@ class EmailService {
           this.provider = new ResendProvider(resendApiKey, fromEmail);
         }
         break;
-      
+
       case 'console':
       default:
         this.provider = new ConsoleProvider();
@@ -242,6 +245,75 @@ ServiceOS - מערכת ניהול עסקית חכמה
     const result = await this.provider.send({
       to,
       subject: '✉️ אימות אימייל - ServiceOS',
+      html,
+      text,
+    });
+
+    return result.success;
+  }
+
+  /**
+   * Send password reset email for client portal
+   */
+  async sendClientPasswordReset(
+    to: string,
+    resetToken: string,
+    userName: string,
+  ): Promise<boolean> {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const resetUrl = `${appUrl}/client-reset-password?token=${resetToken}`;
+
+    const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6;">
+  <p>שלום ${userName},</p>
+  <p>קיבלנו בקשה לאיפוס הסיסמה שלך בפורטל הלקוחות.</p>
+  <p><a href="${resetUrl}">לחץ כאן לאיפוס סיסמה</a></p>
+  <p>הקישור תקף לשעה אחת.</p>
+</body>
+</html>`.trim();
+
+    const text = `שלום ${userName},\n\nלאיפוס סיסמה: ${resetUrl}\n\nהקישור תקף לשעה אחת.`;
+
+    const result = await this.provider.send({
+      to,
+      subject: '🔐 איפוס סיסמה - פורטל לקוחות',
+      html,
+      text,
+    });
+
+    return result.success;
+  }
+
+  /**
+   * Send email verification for client portal
+   */
+  async sendClientEmailVerification(
+    to: string,
+    verificationToken: string,
+    userName: string,
+  ): Promise<boolean> {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const verifyUrl = `${appUrl}/verify-email?token=${verificationToken}`;
+
+    const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6;">
+  <p>שלום ${userName},</p>
+  <p>ברוכים הבאים לפורטל הלקוחות!</p>
+  <p><a href="${verifyUrl}">לחץ כאן לאימות האימייל</a></p>
+</body>
+</html>`.trim();
+
+    const text = `שלום ${userName},\n\nלאימות אימייל: ${verifyUrl}`;
+
+    const result = await this.provider.send({
+      to,
+      subject: '✉️ אימות אימייל - פורטל לקוחות',
       html,
       text,
     });

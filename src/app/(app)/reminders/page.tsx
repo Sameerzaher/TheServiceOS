@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ui, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useDashboardTeacherId } from '@/features/app/DashboardTeacherContext';
+import { mergeTeacherScopeHeaders } from '@/lib/api/teacherScopeHeaders';
 
 interface ReminderSettings {
   reminders_enabled: boolean;
@@ -18,8 +20,10 @@ interface ReminderSettings {
 }
 
 export default function RemindersPage() {
+  const teacherId = useDashboardTeacherId();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [settings, setSettings] = useState<ReminderSettings>({
     reminders_enabled: true,
     reminder_24h_enabled: true,
@@ -34,32 +38,65 @@ export default function RemindersPage() {
   });
   const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
     try {
-      // TODO: Implement actual API call with authentication
-      setLoading(false);
+      const res = await fetch('/api/reminders/settings', {
+        headers: mergeTeacherScopeHeaders(teacherId),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setLoadError(data.error || 'שגיאה בטעינת הגדרות');
+        return;
+      }
+      const s = data.settings;
+      setSettings({
+        reminders_enabled: s.reminders_enabled,
+        reminder_24h_enabled: s.reminder_24h_enabled,
+        reminder_24h_type: s.reminder_24h_type,
+        reminder_2h_enabled: s.reminder_2h_enabled,
+        reminder_2h_type: s.reminder_2h_type,
+        reminder_1h_enabled: s.reminder_1h_enabled,
+        reminder_1h_type: s.reminder_1h_type,
+        payment_reminder_enabled: s.payment_reminder_enabled,
+        payment_reminder_days_after: s.payment_reminder_days_after,
+        payment_reminder_type: s.payment_reminder_type,
+      });
     } catch (error) {
       console.error('Failed to load settings:', error);
+      setLoadError('שגיאה בטעינת הגדרות');
+    } finally {
       setLoading(false);
     }
-  };
+  }, [teacherId]);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
 
   const handleSave = async () => {
     setSaving(true);
     setMessage('');
 
     try {
-      // TODO: Implement actual API call
-      setTimeout(() => {
-        setMessage('ההגדרות נשמרו בהצלחה! ✅');
-        setSaving(false);
-      }, 1000);
+      const res = await fetch('/api/reminders/settings', {
+        method: 'PUT',
+        headers: mergeTeacherScopeHeaders(teacherId, {
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify(settings),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        setMessage(data.error || 'שגיאה בשמירת ההגדרות ❌');
+        return;
+      }
+      setMessage('ההגדרות נשמרו בהצלחה! ✅');
     } catch (error) {
+      console.error('Failed to save settings:', error);
       setMessage('שגיאה בשמירת ההגדרות ❌');
+    } finally {
       setSaving(false);
     }
   };
@@ -92,6 +129,11 @@ export default function RemindersPage() {
       </header>
 
       <div className={ui.pageStack}>
+        {loadError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-800">
+            {loadError}
+          </div>
+        )}
         {message && (
           <div className={cn(
             "rounded-lg p-4 text-sm font-medium",
@@ -361,7 +403,8 @@ export default function RemindersPage() {
             <li>• ניתן לשלוח תזכורת ידנית מעמוד התורים</li>
             <li>• WhatsApp זול יותר מ-SMS</li>
             <li>• כל ההודעות נשמרות בלוג למעקב</li>
-            <li>• צריך להגדיר Twilio כדי לשלוח אמיתי (כרגע מצב פיתוח)</li>
+            <li>• לשליחה אמיתית: הגדר MESSAGING_PROVIDER=twilio ב-Vercel</li>
+            <li>• Cron מריץ /api/reminders/process כל 10 דקות</li>
           </ul>
         </div>
       </div>

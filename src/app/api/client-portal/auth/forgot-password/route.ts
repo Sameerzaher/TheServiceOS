@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Send password reset email
     try {
-      await emailService.sendPasswordReset(
+      await emailService.sendClientPasswordReset(
         client.email,
         resetToken,
         client.full_name

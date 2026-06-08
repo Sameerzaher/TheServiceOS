@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     // Send verification email
     try {
-      await emailService.sendEmailVerification(
+      await emailService.sendClientEmailVerification(
         client.email,
         verificationToken,
         client.full_name

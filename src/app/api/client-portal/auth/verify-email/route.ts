@@ -180,7 +180,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Send email
-    await emailService.sendEmailVerification(
+    await emailService.sendClientEmailVerification(
       client.email,
       verificationToken,
       client.full_name
