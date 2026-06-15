@@ -11,6 +11,7 @@ import { AppointmentStatus, PaymentStatus } from "@/core/types/appointment";
 import { PUBLIC_BOOKING_CUSTOM_FIELD_KEYS } from "@/features/booking/logic/publicBookingShared";
 import { resolveTeacherIdFromRequest } from "@/lib/api/resolveTeacherId";
 import { scheduleAppointmentReminders } from "@/core/reminders/autoSchedule";
+import { scheduleGoogleCalendarSync } from "@/core/integrations/googleCalendar/syncAppointmentToGoogleCalendar";
 import {
   getSupabaseAdminClient,
   isSupabaseAdminConfigured,
@@ -270,6 +271,13 @@ export async function PUT(
         teacherId,
         appointmentId,
         startAt: startIso,
+      });
+
+      scheduleGoogleCalendarSync({
+        supabase,
+        businessId,
+        teacherId,
+        appointmentId,
       });
 
       return NextResponse.json({

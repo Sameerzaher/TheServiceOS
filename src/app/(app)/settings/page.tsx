@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { setDemoModeActive } from "@/core/demo/demoMode";
 import { BackupRestoreSection } from "@/features/settings/components/BackupRestoreSection";
+import { GoogleCalendarSettingsCard } from "@/features/settings/components/GoogleCalendarSettingsCard";
 import { SettingsPanel } from "@/features/settings/components/SettingsPanel";
 import { useServiceApp } from "@/features/app/ServiceAppProvider";
 import { mergeTeacherScopeHeaders } from "@/lib/api/teacherScopeHeaders";
@@ -264,6 +265,9 @@ export default function SettingsPage() {
                   }
                 }}
               />
+              <div className="mt-8">
+                <GoogleCalendarSettingsCard />
+              </div>
               {isAdmin && (
                 <BackupRestoreSection
                   clients={sortedClients}
