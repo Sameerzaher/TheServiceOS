@@ -6,6 +6,7 @@ import {
   isSupabaseAdminConfigured,
 } from "@/lib/supabase/adminClient";
 import { messagingService } from "@/lib/messaging/messagingService";
+import { attachTeachers, fetchTeachersByIds } from "@/lib/client-portal/appointmentsWithTeachers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,8 +100,8 @@ export async function GET(req: Request): Promise<NextResponse> {
           id,
           start_at,
           status,
-          clients ( id, full_name, phone ),
-          teachers ( business_name )
+          teacher_id,
+          clients ( id, full_name, phone )
         `,
         )
         .eq("id", reminder.appointment_id)
@@ -117,9 +118,13 @@ export async function GET(req: Request): Promise<NextResponse> {
       const client = Array.isArray(appointment.clients)
         ? appointment.clients[0]
         : appointment.clients;
-      const teacher = Array.isArray(appointment.teachers)
-        ? appointment.teachers[0]
-        : appointment.teachers;
+      const teachers = await fetchTeachersByIds(
+        supabase,
+        appointment.teacher_id ? [appointment.teacher_id] : [],
+      );
+      const teacher = appointment.teacher_id
+        ? teachers.get(appointment.teacher_id)
+        : null;
 
       if (!client?.phone) {
         await supabase
@@ -217,7 +222,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - row.payment_reminder_days_after);
 
-    const { data: unpaidAppointments } = await supabase
+    const { data: unpaidRaw } = await supabase
       .from("appointments")
       .select(
         `
@@ -225,8 +230,8 @@ export async function GET(req: Request): Promise<NextResponse> {
         amount,
         start_at,
         business_id,
-        clients ( id, full_name, phone ),
-        teachers ( business_name )
+        teacher_id,
+        clients ( id, full_name, phone )
       `,
       )
       .eq("teacher_id", row.teacher_id)
@@ -235,7 +240,9 @@ export async function GET(req: Request): Promise<NextResponse> {
       .lte("start_at", cutoff.toISOString())
       .limit(20);
 
-    for (const apt of unpaidAppointments ?? []) {
+    const unpaidAppointments = await attachTeachers(supabase, unpaidRaw ?? []);
+
+    for (const apt of unpaidAppointments) {
       const { data: existingLog } = await supabase
         .from("message_logs")
         .select("id")
@@ -247,14 +254,13 @@ export async function GET(req: Request): Promise<NextResponse> {
       if (existingLog) continue;
 
       const client = Array.isArray(apt.clients) ? apt.clients[0] : apt.clients;
-      const teacher = Array.isArray(apt.teachers) ? apt.teachers[0] : apt.teachers;
       if (!client?.phone) continue;
 
       const result = await messagingService.sendPaymentReminder(
         client.phone,
         client.full_name ?? "לקוח",
         apt.amount ?? 0,
-        teacher?.business_name ?? "העסק",
+        apt.teacher?.business_name ?? "העסק",
         row.payment_reminder_type,
       );
 

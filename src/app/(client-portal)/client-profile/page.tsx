@@ -5,7 +5,7 @@
  * דף עריכת פרופיל לקוח
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function ClientProfilePage() {
@@ -30,11 +30,7 @@ export default function ClientProfilePage() {
     phone: '',
   });
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const response = await fetch('/api/client-portal/profile');
       
@@ -60,12 +56,16 @@ export default function ClientProfilePage() {
         newPassword: '',
         confirmNewPassword: '',
       });
-    } catch (err) {
+    } catch {
       setError('שגיאה בטעינת פרופיל');
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -454,6 +454,16 @@ export const heUi = {
     quickComplete: "סימון כהושלם",
   },
 
+  payments: {
+    sendPaymentLink: "💳 שלח קישור תשלום",
+    sendLinkLoading: "יוצר קישור...",
+    sendLinkCopied: "קישור התשלום הועתק ללוח",
+    sendLinkWhatsappOpened: "נפתח וואטסאפ עם קישור התשלום",
+    sendLinkError: "לא ניתן ליצור קישור תשלום",
+    paymentLinkWhatsappText: (args: { name: string; url: string }) =>
+      `היי ${args.name}, להשלמת התשלום: ${args.url}`,
+  },
+
   paymentsPage: {
     title: "תשלומים ויתרות",
     subtitle: "סיכום מהיר לפי שיעורים ולקוחות",

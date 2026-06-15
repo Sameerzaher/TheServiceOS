@@ -20,7 +20,7 @@ interface Appointment {
     full_name: string;
     business_name: string;
     phone: string;
-  };
+  } | null;
 }
 
 interface Statistics {
@@ -191,7 +191,7 @@ function PaymentHistoryContent() {
                           <span className="text-2xl">🏢</span>
                           <div>
                             <h3 className="font-semibold text-gray-800">
-                              {apt.teacher.business_name || apt.teacher.full_name}
+                              {apt.teacher?.business_name || apt.teacher?.full_name || 'שירות'}
                             </h3>
                             <p className="text-sm text-gray-600">
                               {appointmentDate} • {appointmentTime}

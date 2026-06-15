@@ -4,7 +4,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET - Get available teachers for booking
@@ -44,7 +48,15 @@ export async function GET(request: NextRequest) {
       .eq('client_id', session.client_id)
       .limit(1);
 
-    let teachers = [];
+    type TeacherOption = {
+      id: string;
+      full_name: string;
+      business_name: string | null;
+      phone: string | null;
+      business_type: string | null;
+    };
+
+    let teachers: TeacherOption[] = [];
 
     if (pastAppointments?.[0]?.teacher_id) {
       const { data: teacher } = await supabase
@@ -58,11 +70,14 @@ export async function GET(request: NextRequest) {
       }
     } else {
       // For new clients, return all active teachers
-      const { data: allTeachers } = await supabase
+      const { data: allTeachers, error: teachersError } = await supabase
         .from('teachers')
         .select('id, full_name, business_name, phone, business_type')
-        .eq('status', 'active')
         .limit(10);
+
+      if (teachersError) {
+        console.error('[book-appointment] teachers list error:', teachersError);
+      }
 
       teachers = allTeachers || [];
     }
@@ -147,19 +162,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const now = new Date().toISOString();
+    const noteText = typeof notes === 'string' ? notes.trim() : '';
+
     // Create appointment
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .insert({
+        id: randomUUID(),
         business_id: teacher.business_id,
         teacher_id: teacherId,
         client_id: session.client_id,
         start_at: startAt,
         end_at: endAt,
         status: 'scheduled',
-        payment_status: 'pending',
-        amount: 0, // Teacher will update this
-        notes: notes || '',
+        payment_status: 'unpaid',
+        amount: 0,
+        custom_fields: noteText ? { notes: noteText } : {},
+        created_at: now,
+        updated_at: now,
       })
       .select('id')
       .single();

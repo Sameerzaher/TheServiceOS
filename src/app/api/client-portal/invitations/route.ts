@@ -7,6 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { generateInvitationToken } from '@/lib/auth/clientAuth';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 interface InvitationEmailData {
   to: string;
   clientName: string;

@@ -5,7 +5,7 @@
  * דף שינוי מועד תור ללקוחות
  */
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Appointment {
@@ -15,7 +15,7 @@ interface Appointment {
   teacher: {
     full_name: string;
     business_name: string;
-  };
+  } | null;
 }
 
 function RescheduleAppointmentPageContent() {
@@ -30,18 +30,7 @@ function RescheduleAppointmentPageContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    const appointmentId = searchParams.get('id');
-    if (!appointmentId) {
-      setError('חסר מזהה תור');
-      setLoading(false);
-      return;
-    }
-
-    loadAppointment(appointmentId);
-  }, [searchParams]);
-
-  const loadAppointment = async (appointmentId: string) => {
+  const loadAppointment = useCallback(async (appointmentId: string) => {
     try {
       const response = await fetch('/api/client-portal/appointments');
       
@@ -54,7 +43,7 @@ function RescheduleAppointmentPageContent() {
       }
 
       const data = await response.json();
-      const apt = data.appointments?.find((a: any) => a.id === appointmentId);
+      const apt = data.appointments?.find((a: Appointment) => a.id === appointmentId);
 
       if (!apt) {
         setError('תור לא נמצא');
@@ -64,7 +53,6 @@ function RescheduleAppointmentPageContent() {
 
       setAppointment(apt);
 
-      // Set default values from existing appointment
       const startDate = new Date(apt.start_at);
       const endDate = new Date(apt.end_at);
       const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
@@ -72,12 +60,23 @@ function RescheduleAppointmentPageContent() {
       setDate(startDate.toISOString().split('T')[0]);
       setStartTime(startDate.toTimeString().substring(0, 5));
       setDuration(durationMinutes.toString());
-    } catch (err) {
+    } catch {
       setError('שגיאה בטעינת תור');
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const appointmentId = searchParams.get('id');
+    if (!appointmentId) {
+      setError('חסר מזהה תור');
+      setLoading(false);
+      return;
+    }
+
+    void loadAppointment(appointmentId);
+  }, [searchParams, loadAppointment]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,7 +205,7 @@ function RescheduleAppointmentPageContent() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-blue-900 mb-2">תור קיים:</h3>
             <p className="text-blue-800">
-              <strong>מורה:</strong> {appointment.teacher.business_name || appointment.teacher.full_name}
+              <strong>מורה:</strong> {appointment.teacher?.business_name || appointment.teacher?.full_name || 'שירות'}
             </p>
             <p className="text-blue-800">
               <strong>תאריך:</strong> {formattedOriginalDate}

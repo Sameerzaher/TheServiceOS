@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { attachTeachers } from '@/lib/client-portal/appointmentsWithTeachers';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Get client's appointments
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {

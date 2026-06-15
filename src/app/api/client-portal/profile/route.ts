@@ -7,6 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { hashClientPassword, verifyClientPassword, isValidClientEmail } from '@/lib/auth/clientAuth';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
  * GET - Get client profile
  */
@@ -54,9 +57,10 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (clientError || !client) {
+      await supabase.from('client_sessions').delete().eq('token', sessionToken);
       return NextResponse.json(
-        { error: 'לקוח לא נמצא' },
-        { status: 404 }
+        { error: 'סשן לא תקין' },
+        { status: 401 }
       );
     }
 
@@ -119,9 +123,10 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (clientError || !client) {
+      await supabase.from('client_sessions').delete().eq('token', sessionToken);
       return NextResponse.json(
-        { error: 'לקוח לא נמצא' },
-        { status: 404 }
+        { error: 'סשן לא תקין' },
+        { status: 401 }
       );
     }
 

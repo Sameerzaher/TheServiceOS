@@ -9,6 +9,9 @@ import { randomBytes } from 'crypto';
 import { emailService } from '@/lib/email/emailService';
 import { insertAuthToken } from '@/lib/auth/authTokens';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { email } = await request.json();

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Get current client info from session
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
@@ -45,9 +48,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .single();
 
     if (clientError || !client) {
+      await supabase.from('client_sessions').delete().eq('token', token);
       return NextResponse.json(
-        { ok: false, error: 'לקוח לא נמצא' },
-        { status: 404 }
+        { ok: false, error: 'סשן לא תקין' },
+        { status: 401 }
       );
     }
 

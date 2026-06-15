@@ -21,6 +21,7 @@ import {
   type VerticalPreset,
 } from "@/core/types/vertical";
 import { cn } from "@/lib/cn";
+import { SendPaymentLinkButton } from "@/components/payments/SendPaymentLinkButton";
 
 export interface AppointmentListProps {
   appointments: AppointmentRecord[];
@@ -464,6 +465,16 @@ export function AppointmentList({
                     >
                       {heUi.appointments.rejectRequest}
                     </Button>
+                  ) : null}
+                  {!pendingRequest && !isPaidStatus(appt.paymentStatus) ? (
+                    <SendPaymentLinkButton
+                      appointmentId={appt.id}
+                      amount={appt.amount ?? 0}
+                      paymentStatus={appt.paymentStatus}
+                      clientName={displayName === "—" ? "" : displayName}
+                      clientPhone={phoneRaw}
+                      className="w-full sm:w-auto"
+                    />
                   ) : null}
                   {onCyclePayment ? (
                     <Button

@@ -14,6 +14,9 @@ import {
   getSupabaseDefaultTeacherId,
 } from '@/core/config/supabaseEnv';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { fullName, email, phone, password } = await request.json();

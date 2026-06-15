@@ -5,7 +5,7 @@
  * דף אימות אימייל ללקוחות
  */
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function VerifyEmailPageContent() {
@@ -18,22 +18,7 @@ function VerifyEmailPageContent() {
   const [resendSuccess, setResendSuccess] = useState(false);
   const verifiedRef = useRef(false);
 
-  useEffect(() => {
-    const token = searchParams.get('token');
-
-    if (!token) {
-      setStatus('error');
-      setMessage('חסר טוקן אימות');
-      return;
-    }
-
-    if (verifiedRef.current) return;
-    verifiedRef.current = true;
-
-    verifyEmail(token);
-  }, [searchParams]);
-
-  const verifyEmail = async (token: string) => {
+  const verifyEmail = useCallback(async (token: string) => {
     try {
       const response = await fetch('/api/client-portal/auth/verify-email', {
         method: 'POST',
@@ -47,7 +32,6 @@ function VerifyEmailPageContent() {
         setStatus('success');
         setMessage(data.message || 'האימייל אומת בהצלחה!');
         
-        // Redirect to login after 3 seconds
         setTimeout(() => {
           router.push('/client-login');
         }, 3000);
@@ -55,11 +39,26 @@ function VerifyEmailPageContent() {
         setStatus('error');
         setMessage(data.error || 'שגיאה באימות האימייל');
       }
-    } catch (error) {
+    } catch {
       setStatus('error');
       setMessage('שגיאת רשת. אנא נסה שוב');
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const token = searchParams.get('token');
+
+    if (!token) {
+      setStatus('error');
+      setMessage('חסר טוקן אימות');
+      return;
+    }
+
+    if (verifiedRef.current) return;
+    verifiedRef.current = true;
+
+    void verifyEmail(token);
+  }, [searchParams, verifyEmail]);
 
   const handleResend = async (e: React.FormEvent) => {
     e.preventDefault();

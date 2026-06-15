@@ -5,7 +5,7 @@
  * דף קביעת תור ללקוחות
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Teacher {
@@ -29,16 +29,7 @@ export default function BookAppointmentPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    loadTeachers();
-    
-    // Set default date to tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setDate(tomorrow.toISOString().split('T')[0]);
-  }, []);
-
-  const loadTeachers = async () => {
+  const loadTeachers = useCallback(async () => {
     try {
       const response = await fetch('/api/client-portal/book-appointment');
       
@@ -56,12 +47,20 @@ export default function BookAppointmentPage() {
       if (data.teachers && data.teachers.length > 0) {
         setSelectedTeacher(data.teachers[0].id);
       }
-    } catch (err) {
+    } catch {
       setError('שגיאה בטעינת מורים');
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    void loadTeachers();
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setDate(tomorrow.toISOString().split('T')[0]);
+  }, [loadTeachers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

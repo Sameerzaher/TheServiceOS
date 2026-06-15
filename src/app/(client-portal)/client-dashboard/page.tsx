@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ui, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -25,7 +25,7 @@ interface Appointment {
     full_name: string;
     business_name: string;
     phone: string;
-  };
+  } | null;
 }
 
 export default function ClientDashboardPage() {
@@ -36,13 +36,8 @@ export default function ClientDashboardPage() {
   const [canceling, setCanceling] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      // Load client info
       const clientRes = await fetch('/api/client-portal/me');
       const clientData = await clientRes.json();
 
@@ -53,7 +48,6 @@ export default function ClientDashboardPage() {
 
       setClient(clientData.client);
 
-      // Load appointments
       const aptRes = await fetch('/api/client-portal/appointments');
       const aptData = await aptRes.json();
 
@@ -65,7 +59,11 @@ export default function ClientDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handleCancelAppointment = async (appointmentId: string) => {
     if (!confirm('בטוח שאתה רוצה לבטל את התור?')) {
@@ -238,10 +236,10 @@ export default function ClientDashboardPage() {
                         <span className="text-2xl">🏢</span>
                         <div>
                           <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">
-                            {apt.teacher.business_name}
+                            {apt.teacher?.business_name || apt.teacher?.full_name || 'שירות'}
                           </h3>
                           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                            {apt.teacher.full_name}
+                            {apt.teacher?.full_name}
                           </p>
                         </div>
                       </div>
@@ -338,7 +336,7 @@ export default function ClientDashboardPage() {
                     </span>
                     <div className="flex-1">
                       <h3 className="font-semibold">
-                        {apt.teacher.business_name}
+                        {apt.teacher?.business_name || apt.teacher?.full_name || 'שירות'}
                       </h3>
                       <p className="text-sm text-neutral-600">
                         {new Date(apt.start_at).toLocaleDateString('he-IL')} •{' '}

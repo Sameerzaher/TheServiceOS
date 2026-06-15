@@ -8,6 +8,9 @@ import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { hashClientPassword } from '@/lib/auth/clientAuth';
 import { findAuthToken, markAuthTokenUsed } from '@/lib/auth/authTokens';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { token, password } = await request.json();

@@ -14,7 +14,7 @@ export async function fetchTeachersByIds(
   supabase: SupabaseClient,
   teacherIds: string[],
 ): Promise<Map<string, TeacherSummary>> {
-  const unique = [...new Set(teacherIds.filter(Boolean))];
+  const unique = Array.from(new Set(teacherIds.filter(Boolean)));
   const map = new Map<string, TeacherSummary>();
   if (unique.length === 0) return map;
 
