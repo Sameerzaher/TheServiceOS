@@ -40,16 +40,22 @@ export async function GET(request: NextRequest) {
     // Get client info to find their teacher (from past appointments)
     const { data: pastAppointments } = await supabase
       .from('appointments')
-      .select('teacher_id, teachers (id, full_name, business_name, phone, business_type)')
+      .select('teacher_id')
       .eq('client_id', session.client_id)
       .limit(1);
 
     let teachers = [];
 
-    if (pastAppointments && pastAppointments.length > 0) {
-      // Return the client's existing teacher
-      const teacher = pastAppointments[0].teachers;
-      teachers = [teacher];
+    if (pastAppointments?.[0]?.teacher_id) {
+      const { data: teacher } = await supabase
+        .from('teachers')
+        .select('id, full_name, business_name, phone, business_type')
+        .eq('id', pastAppointments[0].teacher_id)
+        .maybeSingle();
+
+      if (teacher) {
+        teachers = [teacher];
+      }
     } else {
       // For new clients, return all active teachers
       const { data: allTeachers } = await supabase

@@ -58,16 +58,11 @@ export async function GET(request: NextRequest) {
         payment_status,
         payment_method,
         created_at,
+        teacher_id,
         clients (
           full_name,
           email,
           phone
-        ),
-        teachers (
-          full_name,
-          business_name,
-          phone,
-          email
         )
       `)
       .eq('id', appointmentId)
@@ -84,9 +79,22 @@ export async function GET(request: NextRequest) {
     const client = Array.isArray(appointment.clients)
       ? appointment.clients[0]
       : appointment.clients;
-    const teacher = Array.isArray(appointment.teachers)
-      ? appointment.teachers[0]
-      : appointment.teachers;
+
+    let teacher: {
+      full_name?: string;
+      business_name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+    } | null = null;
+
+    if (appointment.teacher_id) {
+      const { data: teacherRow } = await supabase
+        .from('teachers')
+        .select('full_name, business_name, phone, email')
+        .eq('id', appointment.teacher_id)
+        .maybeSingle();
+      teacher = teacherRow;
+    }
 
     // Generate simple HTML invoice
     const invoiceDate = new Date(appointment.created_at).toLocaleDateString('he-IL');

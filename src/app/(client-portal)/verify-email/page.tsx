@@ -5,7 +5,7 @@
  * דף אימות אימייל ללקוחות
  */
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function VerifyEmailPageContent() {
@@ -16,6 +16,7 @@ function VerifyEmailPageContent() {
   const [resendEmail, setResendEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const verifiedRef = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -25,6 +26,9 @@ function VerifyEmailPageContent() {
       setMessage('חסר טוקן אימות');
       return;
     }
+
+    if (verifiedRef.current) return;
+    verifiedRef.current = true;
 
     verifyEmail(token);
   }, [searchParams]);

@@ -4,8 +4,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { emailService } from '@/lib/email/emailService';
+import {
+  findAuthToken,
+  insertAuthToken,
+  markAuthTokenUsed,
+} from '@/lib/auth/authTokens';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,44 +28,34 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdminClient();
+    const authToken = await findAuthToken(supabase, token, 'email_verification');
 
-    // Find the token
-    const { data: authToken, error: tokenError } = await supabase
-      .from('auth_tokens')
-      .select('*')
-      .eq('token', token)
-      .eq('token_type', 'email_verification')
-      .single();
-
-    if (tokenError || !authToken) {
+    if (!authToken) {
       return NextResponse.json(
         { error: 'טוקן אימות לא תקין או פג תוקפו' },
         { status: 400 }
       );
     }
 
-    // Check if already used
-    if (authToken.used_at) {
+    if (authToken.usedAt) {
       return NextResponse.json(
         { error: 'הטוקן כבר נעשה בו שימוש' },
         { status: 400 }
       );
     }
 
-    // Check expiration
-    if (new Date(authToken.expires_at) < new Date()) {
+    if (new Date(authToken.expiresAt) < new Date()) {
       return NextResponse.json(
         { error: 'הטוקן פג תוקפו. בקש אימות חדש' },
         { status: 400 }
       );
     }
 
-    // Get client
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id, full_name, email, email_verified')
-      .eq('id', authToken.user_id)
-      .single();
+      .eq('id', authToken.userId)
+      .maybeSingle();
 
     if (clientError || !client) {
       return NextResponse.json(
@@ -65,7 +64,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if already verified
     if (client.email_verified) {
       return NextResponse.json({
         success: true,
@@ -74,12 +72,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Mark email as verified
     const { error: updateError } = await supabase
       .from('clients')
-      .update({
-        email_verified: true,
-      })
+      .update({ email_verified: true })
       .eq('id', client.id);
 
     if (updateError) {
@@ -90,18 +85,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark token as used
-    await supabase
-      .from('auth_tokens')
-      .update({ used_at: new Date().toISOString() })
-      .eq('id', authToken.id);
+    await markAuthTokenUsed(supabase, authToken.id);
 
-    // Send welcome email
     try {
       await emailService.sendWelcome(client.email, client.full_name);
     } catch (emailError) {
       console.error('[verify-email] Error sending welcome email:', emailError);
-      // Continue anyway
     }
 
     return NextResponse.json({
@@ -133,15 +122,13 @@ export async function PUT(request: NextRequest) {
 
     const supabase = getSupabaseAdminClient();
 
-    // Find client
-    const { data: client, error: clientError } = await supabase
+    const { data: client } = await supabase
       .from('clients')
       .select('id, full_name, email, email_verified')
       .eq('email', email.toLowerCase())
-      .single();
+      .maybeSingle();
 
-    if (clientError || !client) {
-      // Don't reveal if email exists
+    if (!client) {
       return NextResponse.json({
         success: true,
         message: 'אם האימייל קיים במערכת, נשלח אליך אימייל חדש',
@@ -155,31 +142,25 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    // Generate new token
-    const { randomBytes } = await import('crypto');
     const verificationToken = randomBytes(32).toString('hex');
     const tokenExpiresAt = new Date();
     tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24);
 
-    // Store new token
-    const { error: tokenError } = await supabase
-      .from('auth_tokens')
-      .insert({
-        token: verificationToken,
-        token_type: 'email_verification',
-        user_id: client.id,
-        expires_at: tokenExpiresAt.toISOString(),
-      });
+    const tokenResult = await insertAuthToken(supabase, {
+      userId: client.id,
+      token: verificationToken,
+      tokenType: 'email_verification',
+      expiresAt: tokenExpiresAt.toISOString(),
+    });
 
-    if (tokenError) {
-      console.error('[verify-email] Error creating token:', tokenError);
+    if (!tokenResult.ok) {
+      console.error('[verify-email] Error creating token:', tokenResult.error);
       return NextResponse.json(
         { error: 'שגיאה ביצירת טוקן אימות' },
         { status: 500 }
       );
     }
 
-    // Send email
     await emailService.sendClientEmailVerification(
       client.email,
       verificationToken,

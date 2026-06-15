@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { hashClientPassword } from '@/lib/auth/clientAuth';
+import { findAuthToken, markAuthTokenUsed } from '@/lib/auth/authTokens';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,44 +49,34 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdminClient();
+    const authToken = await findAuthToken(supabase, token, 'password_reset');
 
-    // Find token
-    const { data: authToken, error: tokenError } = await supabase
-      .from('auth_tokens')
-      .select('*')
-      .eq('token', token)
-      .eq('token_type', 'password_reset')
-      .single();
-
-    if (tokenError || !authToken) {
+    if (!authToken) {
       return NextResponse.json(
         { error: 'טוקן איפוס לא תקין או פג תוקפו' },
         { status: 400 }
       );
     }
 
-    // Check if already used
-    if (authToken.used_at) {
+    if (authToken.usedAt) {
       return NextResponse.json(
         { error: 'הטוקן כבר נעשה בו שימוש' },
         { status: 400 }
       );
     }
 
-    // Check expiration
-    if (new Date(authToken.expires_at) < new Date()) {
+    if (new Date(authToken.expiresAt) < new Date()) {
       return NextResponse.json(
         { error: 'הטוקן פג תוקפו. בקש איפוס חדש' },
         { status: 400 }
       );
     }
 
-    // Get client
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('id, portal_enabled')
-      .eq('id', authToken.user_id)
-      .single();
+      .eq('id', authToken.userId)
+      .maybeSingle();
 
     if (clientError || !client) {
       return NextResponse.json(
@@ -118,11 +109,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark token as used
-    await supabase
-      .from('auth_tokens')
-      .update({ used_at: new Date().toISOString() })
-      .eq('id', authToken.id);
+    await markAuthTokenUsed(supabase, authToken.id);
 
     return NextResponse.json({
       success: true,

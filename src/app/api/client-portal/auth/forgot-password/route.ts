@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { randomBytes } from 'crypto';
 import { emailService } from '@/lib/email/emailService';
+import { insertAuthToken } from '@/lib/auth/authTokens';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,18 +50,15 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour
 
-    // Store token
-    const { error: tokenError } = await supabase
-      .from('auth_tokens')
-      .insert({
-        token: resetToken,
-        token_type: 'password_reset',
-        user_id: client.id,
-        expires_at: expiresAt.toISOString(),
-      });
+    const tokenResult = await insertAuthToken(supabase, {
+      userId: client.id,
+      token: resetToken,
+      tokenType: 'password_reset',
+      expiresAt: expiresAt.toISOString(),
+    });
 
-    if (tokenError) {
-      console.error('[client-forgot-password] Token error:', tokenError);
+    if (!tokenResult.ok) {
+      console.error('[client-forgot-password] Token error:', tokenResult.error);
       return NextResponse.json(
         { error: 'שגיאה ביצירת קישור איפוס' },
         { status: 500 }

@@ -35,6 +35,14 @@ export function getServerStripeSecretKey(): string | undefined {
   return readTrimmed("STRIPE_SECRET_KEY");
 }
 
+export function getServerStripeWebhookSecret(): string | undefined {
+  return readTrimmed("STRIPE_WEBHOOK_SECRET");
+}
+
+export function isStripeConfigured(): boolean {
+  return Boolean(getServerStripeSecretKey());
+}
+
 /** Resend API key (server only). */
 export function getServerResendApiKey(): string | undefined {
   return readTrimmed("RESEND_API_KEY");

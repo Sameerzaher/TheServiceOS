@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
+import { attachTeachers } from '@/lib/client-portal/appointmentsWithTeachers';
 
 /**
  * GET - Get client's payment history
@@ -48,11 +49,7 @@ export async function GET(request: NextRequest) {
         payment_status,
         payment_method,
         created_at,
-        teachers (
-          full_name,
-          business_name,
-          phone
-        )
+        teacher_id
       `)
       .eq('client_id', session.client_id)
       .neq('status', 'canceled')
@@ -67,21 +64,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const withTeachers = await attachTeachers(supabase, appointments ?? []);
+
     // Calculate statistics
-    const totalPaid = appointments
+    const totalPaid = withTeachers
       .filter((a) => a.payment_status === 'paid')
       .reduce((sum, a) => sum + (a.amount || 0), 0);
 
-    const totalPending = appointments
-      .filter((a) => a.payment_status === 'pending')
+    const totalPending = withTeachers
+      .filter((a) => a.payment_status !== 'paid')
       .reduce((sum, a) => sum + (a.amount || 0), 0);
 
     return NextResponse.json({
-      appointments: appointments || [],
+      appointments: withTeachers,
       statistics: {
         totalPaid,
         totalPending,
-        totalPayments: appointments?.length || 0,
+        totalPayments: withTeachers.length,
       },
     });
   } catch (error) {

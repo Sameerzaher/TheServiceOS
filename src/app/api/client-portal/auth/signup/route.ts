@@ -4,10 +4,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes, randomUUID } from 'crypto';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
 import { hashClientPassword, isValidClientEmail } from '@/lib/auth/clientAuth';
-import { randomBytes } from 'crypto';
 import { emailService } from '@/lib/email/emailService';
+import { insertAuthToken } from '@/lib/auth/authTokens';
+import {
+  getSupabaseBusinessId,
+  getSupabaseDefaultTeacherId,
+} from '@/core/config/supabaseEnv';
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,7 +70,7 @@ export async function POST(request: NextRequest) {
       .from('clients')
       .select('id')
       .eq('email', email.toLowerCase())
-      .single();
+      .maybeSingle();
 
     if (existingClient) {
       return NextResponse.json(
@@ -82,16 +87,25 @@ export async function POST(request: NextRequest) {
     const tokenExpiresAt = new Date();
     tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24); // 24 hours
 
-    // Create client account
+    const now = new Date().toISOString();
+
+    // Create client account (scoped to default business/teacher for MVP portal signup)
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .insert({
+        id: randomUUID(),
+        business_id: getSupabaseBusinessId(),
+        teacher_id: getSupabaseDefaultTeacherId(),
         full_name: fullName,
         email: email.toLowerCase(),
         phone,
         password_hash: passwordHash,
         email_verified: false,
         portal_enabled: true,
+        notes: '',
+        custom_fields: {},
+        created_at: now,
+        updated_at: now,
       })
       .select('id, full_name, email')
       .single();
@@ -104,19 +118,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store verification token in auth_tokens table
-    const { error: tokenError } = await supabase
-      .from('auth_tokens')
-      .insert({
-        token: verificationToken,
-        token_type: 'email_verification',
-        user_id: client.id,
-        expires_at: tokenExpiresAt.toISOString(),
-      });
+    const tokenResult = await insertAuthToken(supabase, {
+      userId: client.id,
+      token: verificationToken,
+      tokenType: 'email_verification',
+      expiresAt: tokenExpiresAt.toISOString(),
+    });
 
-    if (tokenError) {
-      console.error('[client-signup] Error creating verification token:', tokenError);
-      // Continue anyway - we can send verification later
+    if (!tokenResult.ok) {
+      console.error('[client-signup] Error creating verification token:', tokenResult.error);
+      return NextResponse.json(
+        {
+          error:
+            'החשבון נוצר אך אימות האימייל נכשל. הרץ migration 019_auth_tokens_user_id ב-Supabase ונסה שוב.',
+        },
+        { status: 500 }
+      );
     }
 
     // Send verification email

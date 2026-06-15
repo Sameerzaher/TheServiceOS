@@ -34,6 +34,7 @@ export default function ClientDashboardPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -96,9 +97,29 @@ export default function ClientDashboardPage() {
   };
 
   const handleLogout = async () => {
-    // Clear cookie and redirect
     document.cookie = 'client_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     router.push('/client-login');
+  };
+
+  const handlePay = async (appointmentId: string) => {
+    setPayingId(appointmentId);
+    try {
+      const response = await fetch('/api/client-portal/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appointmentId }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.url) {
+        alert(data.error || 'שגיאה ביצירת תשלום');
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      alert('שגיאה ביצירת תשלום');
+    } finally {
+      setPayingId(null);
+    }
   };
 
   if (loading) {
@@ -266,6 +287,15 @@ export default function ClientDashboardPage() {
                     </div>
 
                     <div className="flex flex-col gap-2">
+                      {apt.amount > 0 && apt.payment_status !== 'paid' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handlePay(apt.id)}
+                          disabled={payingId === apt.id}
+                        >
+                          {payingId === apt.id ? 'מעביר...' : '💳 שלם'}
+                        </Button>
+                      )}
                       <Button
                         variant="secondary"
                         size="sm"

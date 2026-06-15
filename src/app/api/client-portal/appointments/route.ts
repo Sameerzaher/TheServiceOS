@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdminClient } from '@/lib/supabase/adminClient';
+import { attachTeachers } from '@/lib/client-portal/appointmentsWithTeachers';
 
 // Get client's appointments
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -32,10 +33,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // Get appointments
     const { data: appointments, error } = await supabase
       .from('appointments')
-      .select(`
-        *,
-        teacher:teachers(id, full_name, business_name, phone)
-      `)
+      .select('*')
       .eq('client_id', session.client_id)
       .order('start_at', { ascending: false });
 
@@ -47,9 +45,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       );
     }
 
+    const withTeachers = await attachTeachers(supabase, appointments ?? []);
+
     return NextResponse.json({
       ok: true,
-      appointments: appointments || [],
+      appointments: withTeachers,
     });
   } catch (error) {
     console.error('[client-portal/appointments] Error:', error);
